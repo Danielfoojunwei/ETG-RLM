@@ -119,6 +119,60 @@ from etg_rlm.statistics import (
     BootstrapCIResult,
     StatisticalAnalysis,
 )
+from etg_rlm.factscore import (
+    FactScoreResult,
+    BatchFactScoreResult,
+    ClaimScoreResult,
+    compute_factscore,
+    aggregate_factscores,
+    compute_factscore_with_retrieval,
+)
+from etg_rlm.citation_metrics import (
+    Citation,
+    CitationMetricsResult,
+    BatchCitationResult,
+    compute_citation_metrics,
+    aggregate_citation_metrics,
+    extract_citations_from_esbg,
+)
+from etg_rlm.logic_verification import (
+    StepValidity,
+    ReasoningStep,
+    ChainVerificationResult,
+    BatchChainResult,
+    verify_reasoning_chain,
+    aggregate_chain_results,
+    extract_reasoning_chain_from_esbg,
+)
+from etg_rlm.self_check import (
+    SelfCheckConfig,
+    SelfCheckMethod,
+    SelfCheckResult,
+    BatchSelfCheckResult,
+    self_check_claims,
+    run_self_check_pipeline,
+    aggregate_self_check_results,
+)
+from etg_rlm.benchmark_runner import (
+    ModelType,
+    BenchmarkDataset,
+    BenchmarkInstance,
+    BenchmarkReport,
+    DatasetResults,
+    run_benchmark,
+    aggregate_dataset_results,
+)
+from etg_rlm.reporting import (
+    generate_markdown_report,
+    generate_latex_table,
+    generate_json_report,
+    build_factscore_bar_chart,
+    build_citation_heatmap,
+    build_scaling_line_chart,
+    BarChartSpec,
+    LineChartSpec,
+    HeatmapSpec,
+)
 
 __version__ = "0.1.0"
 
@@ -217,4 +271,52 @@ __all__ = [
     "EffectSizeResult",
     "BootstrapCIResult",
     "StatisticalAnalysis",
+    # FactScore (Min et al., EMNLP 2023)
+    "FactScoreResult",
+    "BatchFactScoreResult",
+    "ClaimScoreResult",
+    "compute_factscore",
+    "aggregate_factscores",
+    "compute_factscore_with_retrieval",
+    # Citation metrics (Gao et al., ACL 2023; Rashkin et al., ACL 2022)
+    "Citation",
+    "CitationMetricsResult",
+    "BatchCitationResult",
+    "compute_citation_metrics",
+    "aggregate_citation_metrics",
+    "extract_citations_from_esbg",
+    # Logic-step verification (multi-hop reasoning)
+    "StepValidity",
+    "ReasoningStep",
+    "ChainVerificationResult",
+    "BatchChainResult",
+    "verify_reasoning_chain",
+    "aggregate_chain_results",
+    "extract_reasoning_chain_from_esbg",
+    # Self-CheckGPT (Manakul et al., EMNLP 2023)
+    "SelfCheckConfig",
+    "SelfCheckMethod",
+    "SelfCheckResult",
+    "BatchSelfCheckResult",
+    "self_check_claims",
+    "run_self_check_pipeline",
+    "aggregate_self_check_results",
+    # Canonical benchmark runner
+    "ModelType",
+    "BenchmarkDataset",
+    "BenchmarkInstance",
+    "BenchmarkReport",
+    "DatasetResults",
+    "run_benchmark",
+    "aggregate_dataset_results",
+    # Reporting and visualization
+    "generate_markdown_report",
+    "generate_latex_table",
+    "generate_json_report",
+    "build_factscore_bar_chart",
+    "build_citation_heatmap",
+    "build_scaling_line_chart",
+    "BarChartSpec",
+    "LineChartSpec",
+    "HeatmapSpec",
 ]

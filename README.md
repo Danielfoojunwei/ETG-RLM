@@ -170,6 +170,16 @@ etg_rlm/
   human_eval.py    -- Human evaluation protocol (faithfulness rating, pairwise preference, Fleiss' Kappa)
   ablations.py     -- 4 ablation studies (NoMultiView, NoConstraint, Threshold-Sweep, PolicyAblation)
   statistics.py    -- Statistical analysis (paired t-test, Cohen's d, bootstrapped CIs)
+  factscore.py     -- FactScore metrics: atomic claim decomposition + NLI scoring (Min et al., 2023)
+  citation_metrics.py -- Citation Precision/Recall (Gao et al., 2023; Rashkin et al., 2022)
+  logic_verification.py -- Logic-Step Verification for multi-hop reasoning chains
+  self_check.py    -- Self-CheckGPT baseline: zero-resource hallucination detection (Manakul et al., 2023)
+  benchmark_runner.py -- Canonical benchmark runner: all models x all datasets orchestration
+  reporting.py     -- Report generation: markdown tables, LaTeX, JSON, visualization specs
+scripts/
+  download_data.py -- Dataset download script (TruthfulQA, HaluEval, HotpotQA, NQ, ELI5)
+.github/workflows/
+  eval.yml         -- GitHub Actions CI/CD: unit tests + evaluation matrix (4 models x 5 datasets)
 ```
 
 ## Experimental Design
@@ -199,10 +209,38 @@ etg_rlm/
 - **Cohen's d**: Effect size magnitude (target d > 0.8 = large)
 - **Bootstrap CIs**: 95% confidence intervals (10,000 resamples)
 
+## Canonical Evaluation Framework
+
+### Advanced Metrics
+
+| Metric | Description | Reference |
+|--------|-------------|-----------|
+| FactScore | Atomic claim precision via NLI | Min et al., EMNLP 2023 |
+| Citation Precision | Fraction of citations that are valid | Gao et al., ACL 2023 |
+| Citation Recall | Fraction of entailed claims with citations | Rashkin et al., ACL 2022 |
+| Logic-Step Verification | Step-level accuracy in multi-hop chains | Yang et al., EMNLP 2018 |
+| Self-CheckGPT | Zero-resource consistency checking | Manakul et al., EMNLP 2023 |
+
+### Benchmark Models (4 configurations)
+
+| Model | Description | Evidence Source |
+|-------|-------------|-----------------|
+| Zero-Shot GPT-4 | No retrieval, no verification | Parametric only |
+| Standard RAG (Contriever) | Dense retrieval, no verification | Retrieved passages |
+| Self-CheckGPT | Stochastic sampling consistency | Self-consistency |
+| ETG (Ours) | Multi-view verification + type-checked decoding | Evidence-scoped graph |
+
+### CI/CD Pipeline
+
+The GitHub Actions workflow runs a 4x5 evaluation matrix:
+- **4 models**: Zero-Shot, Standard RAG, Self-CheckGPT, ETG
+- **5 datasets**: TruthfulQA, HaluEval, HotpotQA, NQ, ELI5
+- Produces aggregated reports with markdown tables and LaTeX snippets
+
 ## Running Tests
 
 ```bash
-pytest tests/ -v    # 239 tests
+pytest tests/ -v    # 346 tests
 ```
 
 ## Why This Is Fundamentally New
