@@ -79,6 +79,46 @@ from etg_rlm.views import (
     create_view,
     create_default_view_suite,
 )
+from etg_rlm.datasets import (
+    DatasetName,
+    DatasetConfig,
+    TaskType,
+    ALL_DATASET_CONFIGS,
+    get_dataset_config,
+    total_eval_instances,
+)
+from etg_rlm.human_eval import (
+    FaithfulnessRating,
+    FaithfulnessAnnotation,
+    PairwiseAnnotation,
+    PreferenceDimension,
+    PreferenceChoice,
+    aggregate_faithfulness,
+    aggregate_preferences,
+    fleiss_kappa,
+    HumanEvalSummary,
+)
+from etg_rlm.ablations import (
+    AblationType,
+    AblationConfig,
+    RandomPolicy,
+    all_ablation_configs,
+    make_no_multi_view_config,
+    make_no_constraint_config,
+    make_threshold_sweep_configs,
+    make_policy_ablation_config,
+)
+from etg_rlm.statistics import (
+    paired_t_test,
+    cohens_d,
+    bootstrap_ci,
+    bootstrap_paired_ci,
+    full_analysis,
+    PairedTTestResult,
+    EffectSizeResult,
+    BootstrapCIResult,
+    StatisticalAnalysis,
+)
 
 __version__ = "0.1.0"
 
@@ -141,4 +181,40 @@ __all__ = [
     "ViewConfig",
     "create_view",
     "create_default_view_suite",
+    # Datasets (experimental design Section 1)
+    "DatasetName",
+    "DatasetConfig",
+    "TaskType",
+    "ALL_DATASET_CONFIGS",
+    "get_dataset_config",
+    "total_eval_instances",
+    # Human evaluation (experimental design Section 2.2)
+    "FaithfulnessRating",
+    "FaithfulnessAnnotation",
+    "PairwiseAnnotation",
+    "PreferenceDimension",
+    "PreferenceChoice",
+    "aggregate_faithfulness",
+    "aggregate_preferences",
+    "fleiss_kappa",
+    "HumanEvalSummary",
+    # Ablation studies (experimental design Section 3)
+    "AblationType",
+    "AblationConfig",
+    "RandomPolicy",
+    "all_ablation_configs",
+    "make_no_multi_view_config",
+    "make_no_constraint_config",
+    "make_threshold_sweep_configs",
+    "make_policy_ablation_config",
+    # Statistical analysis (experimental design Section 4)
+    "paired_t_test",
+    "cohens_d",
+    "bootstrap_ci",
+    "bootstrap_paired_ci",
+    "full_analysis",
+    "PairedTTestResult",
+    "EffectSizeResult",
+    "BootstrapCIResult",
+    "StatisticalAnalysis",
 ]

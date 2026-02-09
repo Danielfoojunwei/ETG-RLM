@@ -166,12 +166,43 @@ etg_rlm/
   baselines.py     -- 4 baseline configurations (Standard LLM, RAG, RAG+Verifier, Self-Critique)
   evaluation.py    -- Comparative benchmarking harness with KPI checking
   views/factory.py -- 5 diverse verification view types with factory
+  datasets.py      -- 5 dataset specifications (NQ, HotpotQA, TruthfulQA, HaluEval, XSum)
+  human_eval.py    -- Human evaluation protocol (faithfulness rating, pairwise preference, Fleiss' Kappa)
+  ablations.py     -- 4 ablation studies (NoMultiView, NoConstraint, Threshold-Sweep, PolicyAblation)
+  statistics.py    -- Statistical analysis (paired t-test, Cohen's d, bootstrapped CIs)
 ```
+
+## Experimental Design
+
+### Datasets (5 benchmarks, 3,817 total instances)
+
+| Dataset | Task | N | Purpose |
+|---------|------|---|---------|
+| Natural Questions | Factual QA | 1,000 | Factual extraction from long documents |
+| HotpotQA | Multi-hop QA | 500 | Dependency construction across sources |
+| TruthfulQA | Truthfulness | 817 | Resistance to plausible misconceptions |
+| HaluEval | Hallucination detection | 1,000 | Direct hallucination measurement |
+| XSum | Summarization | 500 | Faithful compression |
+
+### Ablation Studies
+
+| Ablation | Configuration | Purpose |
+|----------|---------------|---------|
+| ETG-NoMultiView | N=1 single view | Multi-view stability importance |
+| ETG-NoConstraint | ESBG built, no constraint | Constrained decoding vs. scoring |
+| ETG-Threshold-Sweep | tau in {0.5, 0.6, 0.7, 0.8, 0.9} | Precision-recall trade-off |
+| ETG-PolicyAblation | Random claim selection | Recursive policy importance |
+
+### Statistical Analysis
+
+- **Paired t-test**: H0 = no hallucination reduction vs. RAG (alpha = 0.05)
+- **Cohen's d**: Effect size magnitude (target d > 0.8 = large)
+- **Bootstrap CIs**: 95% confidence intervals (10,000 resamples)
 
 ## Running Tests
 
 ```bash
-pytest tests/ -v    # 144 tests
+pytest tests/ -v    # 239 tests
 ```
 
 ## Why This Is Fundamentally New
