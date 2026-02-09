@@ -49,6 +49,36 @@ from etg_rlm.pipeline import (
     ETGPipeline,
     ETGConfig,
 )
+from etg_rlm.metrics import (
+    compute_faithfulness,
+    rouge_l,
+    aggregate_metrics,
+    FaithfulnessMetrics,
+    ROUGELScore,
+    LatencyTracker,
+)
+from etg_rlm.baselines import (
+    BaselineType,
+    BaselineConfig,
+    StandardLLMBaseline,
+    StandardRAGBaseline,
+    RAGVerifierBaseline,
+    SelfCritiqueBaseline,
+)
+from etg_rlm.evaluation import (
+    EvalInstance,
+    evaluate_instance,
+    build_report,
+    build_comparative_report,
+    check_kpis,
+    ComparativeReport,
+)
+from etg_rlm.views import (
+    ViewType,
+    ViewConfig,
+    create_view,
+    create_default_view_suite,
+)
 
 __version__ = "0.1.0"
 
@@ -85,4 +115,30 @@ __all__ = [
     # Pipeline (end-to-end)
     "ETGPipeline",
     "ETGConfig",
+    # Metrics (eval plan Section 3)
+    "compute_faithfulness",
+    "rouge_l",
+    "aggregate_metrics",
+    "FaithfulnessMetrics",
+    "ROUGELScore",
+    "LatencyTracker",
+    # Baselines (eval plan Section 2)
+    "BaselineType",
+    "BaselineConfig",
+    "StandardLLMBaseline",
+    "StandardRAGBaseline",
+    "RAGVerifierBaseline",
+    "SelfCritiqueBaseline",
+    # Evaluation harness
+    "EvalInstance",
+    "evaluate_instance",
+    "build_report",
+    "build_comparative_report",
+    "check_kpis",
+    "ComparativeReport",
+    # View factory (eval plan Section 1)
+    "ViewType",
+    "ViewConfig",
+    "create_view",
+    "create_default_view_suite",
 ]

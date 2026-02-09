@@ -121,6 +121,36 @@ bound = hallucination_upper_bound(n_views=10, tau=0.7, alpha=0.1)
 print(f"Bound with N=10: {bound:.6f}")
 ```
 
+## Evaluation Framework
+
+### Baselines (4 controls)
+
+| Control | Description | Purpose |
+|---------|-------------|---------|
+| Standard LLM | Llama 3 70B zero-shot | Base hallucination rate |
+| Standard RAG | Generator + dense retriever (top-k) | Industry standard |
+| RAG + Verifier | RAG with post-hoc claim verification | Corrective vs. preventative |
+| Self-Critique | Single-view LLM self-check | Behavioral vs. structural |
+
+### Verification Views (N=5)
+
+| View | Retriever | Chunking | Special |
+|------|-----------|----------|---------|
+| V1 | Dense (Sentence-BERT) | 512 tokens | Baseline |
+| V2 | Sparse (BM25) | 512 tokens | Lexical complement |
+| V3 | Dense | 128 tokens | Fine-grained precision |
+| V4 | Dense | 512 tokens | Query rewriting (T5) |
+| V5 | Dense | 512 tokens | Negative sampling |
+
+### KPI Targets
+
+| KPI | Target |
+|-----|--------|
+| Hallucination rate | < 1% |
+| Reduction vs. RAG | > 90% |
+| ROUGE-L vs. baseline | Maintained (>= 95%) |
+| Latency | < 500ms/token |
+
 ## Architecture
 
 ```
@@ -132,12 +162,16 @@ etg_rlm/
   bounds.py        -- Propositions 1-3: hallucination bounds, zero-confabulation, allocation
   algorithm.py     -- Section 5: ebrg(), constrained_decode()
   pipeline.py      -- End-to-end ETGPipeline orchestration
+  metrics.py       -- Hallucination rate, claim precision/recall, ROUGE-L, latency
+  baselines.py     -- 4 baseline configurations (Standard LLM, RAG, RAG+Verifier, Self-Critique)
+  evaluation.py    -- Comparative benchmarking harness with KPI checking
+  views/factory.py -- 5 diverse verification view types with factory
 ```
 
 ## Running Tests
 
 ```bash
-pytest tests/ -v    # 100 tests
+pytest tests/ -v    # 144 tests
 ```
 
 ## Why This Is Fundamentally New
