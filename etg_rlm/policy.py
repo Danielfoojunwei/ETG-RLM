@@ -1,26 +1,26 @@
-"""RLM Recursion Policy for ESBG construction.
+"""Recursive Graph Construction Policy (Section 4.5).
 
-The RLM recursion is a policy rho that chooses which claim/node to expand
-next, and which view to run, given the current partial graph G_t:
-
+We model ESBG construction as a recursive decision process governed by
+a policy rho. At step t, given partial graph G_t:
     a_t ~ rho(a | q, E, G_t)
 
-Actions include:
-    - PROPOSE_CLAIM: propose a new claim node
-    - ADD_DEPENDENCY: add a dependency edge
-    - RUN_VIEW: run V_i for an existing claim
-    - SEARCH_CONTRADICTIONS: search for contradicting evidence
-    - SPLIT_CLAIM: split a claim into subclaims
-    - STOP: terminate the recursion
+Actions (Section 4.5):
+    1. Propose new claim node
+    2. Add dependency edge
+    3. Execute verification view V_i on a node
+    4. Search for contradictions
+    5. Decompose a claim
+    6. Terminate
 
-The recursion ends at G_T.
+The recursion terminates at G_T when:
+    - all high-utility claims are verified or rejected, or
+    - compute budget is exhausted.
 
-Proposition 2 (Compute-allocation optimality):
-Given a budget B for verifier calls, the best policy rho allocates more
-views to claims with:
-    - high utility contribution
-    - high uncertainty (support mass near threshold)
-    - high risk (safety-critical claims)
+Proposition 3 (Optimal Compute Allocation):
+Let each verification view have cost k. Under budget B, the optimal
+policy allocates views to claims maximizing:
+    E[Delta Verified Utility] / k
+This reduces to a bandit / knapsack allocation problem over claims.
 """
 
 from __future__ import annotations
@@ -102,11 +102,14 @@ class RecursionPolicy(ABC):
 class UtilityWeightedPolicy(RecursionPolicy):
     """A policy that allocates views based on utility-weighted priorities.
 
-    Implements the compute-allocation strategy from Proposition 2:
-    given a budget B, allocate more views to claims with:
-        - high utility (how important is this claim to the answer)
-        - high uncertainty (support mass near the threshold tau)
-        - high risk (safety-critical claims)
+    Implements the compute-allocation strategy from Proposition 3:
+    given a budget B, allocate more views to claims maximizing
+    E[Delta Verified Utility] / k, where k is the cost per view.
+
+    Priority factors:
+        - utility (how important is this claim to the answer)
+        - uncertainty (support mass near the threshold tau)
+        - risk (safety-critical claims)
 
     This is formalized as a knapsack / bandit objective.
     """

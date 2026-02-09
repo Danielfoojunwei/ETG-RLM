@@ -1,24 +1,34 @@
-"""Theoretical bounds for Evidence-Typed Generation.
+"""Theoretical bounds for Evidence-Typed Generation (Section 6).
 
-Proposition 1 (Hallucination upper bound):
-    If the verifier has false-positive rate alpha per view, then any
-    unsupported claim has:
+Proposition 1 (Exponential Suppression of Hallucinations):
+    Assume a hallucinated claim has per-view false-positive probability alpha,
+    and views are conditionally independent. Then:
         Pr[m(c) >= tau] <= exp(-N * D(tau || alpha))
-    where D is the KL divergence for Bernoulli distributions.
+    where D is KL divergence between Bernoulli distributions.
+    Implication: increasing recursion depth N yields exponential decay
+    in hallucination acceptance. This establishes an inference-time
+    scaling law for faithfulness.
 
-    This gives an inference-time scaling law for faithfulness:
-    by increasing N, unsupported claims become exponentially unlikely
-    to pass the support-mass gate.
+Proposition 2 (Zero-Confabulation Property):
+    Under exact entailment verification:
+        Pr[exists c in A(y*) s.t. supp(E,c) = empty] = 0
+    Hallucination is eliminated by construction, not by reward shaping.
+    A confabulation event is defined as emitting a claim without evidence
+    pointers. Under ETG constraints, confabulation probability is zero
+    (unless the verifier produces false positives).
 
-Proposition 2 (Compute-allocation optimality):
-    Given a budget B for verifier calls, the optimal allocation is
-    formalized as a knapsack / bandit objective.
+Proposition 3 (Optimal Compute Allocation):
+    Let each verification view have cost k. Under budget B, the optimal
+    policy allocates views to claims maximizing:
+        E[Delta Verified Utility] / k
+    This reduces to a bandit / knapsack allocation problem over claims.
 """
 
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
+from typing import NamedTuple
 
 
 def kl_bernoulli(p: float, q: float) -> float:
@@ -49,12 +59,15 @@ def hallucination_upper_bound(
     tau: float,
     alpha: float,
 ) -> float:
-    """Compute the hallucination upper bound from Proposition 1.
+    """Proposition 1: Exponential Suppression of Hallucinations.
 
-    For an unsupported claim with verifier false-positive rate alpha:
+    Assume a hallucinated claim has per-view false-positive probability alpha,
+    and views are conditionally independent. Then:
         Pr[m(c) >= tau] <= exp(-N * D(tau || alpha))
 
     This bound uses Sanov's theorem / Chernoff bound for binomial tails.
+    Implication: increasing recursion depth N yields exponential decay
+    in hallucination acceptance -- an inference-time scaling law for faithfulness.
 
     Args:
         n_views: N, number of independent verification views
@@ -120,9 +133,108 @@ def required_views_for_bound(
     return math.ceil(n)
 
 
+class ConfabulationCheckResult(NamedTuple):
+    """Result of checking the zero-confabulation property (Proposition 2).
+
+    Under exact entailment verification:
+        Pr[exists c in A(y*) s.t. supp(E,c) = empty] = 0
+
+    A confabulation is emitting a claim without evidence pointers.
+    """
+
+    satisfies_proposition: bool
+    confabulating_node_ids: list[str]
+    total_verified_nodes: int
+
+
+def check_zero_confabulation(
+    verified_node_ids: set[str],
+    node_evidence_counts: dict[str, int],
+    node_support_masses: dict[str, float],
+    tau: float,
+) -> ConfabulationCheckResult:
+    """Proposition 2: Zero-Confabulation Property.
+
+    Under exact entailment verification:
+        Pr[exists c in A(y*) s.t. supp(E,c) = empty] = 0
+
+    Hallucination is eliminated by construction, not by reward shaping.
+    Every rendered claim must have m(c) >= tau with entailed status,
+    so evidence pointers are guaranteed to exist.
+
+    This function verifies that the invariant holds on a concrete ESBG:
+    every node in V^tau must have at least one evidence span and
+    support mass >= tau.
+
+    Args:
+        verified_node_ids: the set V^tau of rendered node IDs
+        node_evidence_counts: node_id -> |sigma(v)| (number of evidence spans)
+        node_support_masses: node_id -> m(v)
+        tau: support mass threshold
+
+    Returns:
+        ConfabulationCheckResult indicating whether the property holds.
+    """
+    confabulating: list[str] = []
+    for nid in verified_node_ids:
+        n_evidence = node_evidence_counts.get(nid, 0)
+        mass = node_support_masses.get(nid, 0.0)
+        if n_evidence == 0 or mass < tau:
+            confabulating.append(nid)
+
+    return ConfabulationCheckResult(
+        satisfies_proposition=len(confabulating) == 0,
+        confabulating_node_ids=confabulating,
+        total_verified_nodes=len(verified_node_ids),
+    )
+
+
+class InferenceScalingResult(NamedTuple):
+    """Inference-time scaling law: hallucination probability vs N."""
+
+    n_views_sequence: list[int]
+    bounds_sequence: list[float]
+    tau: float
+    alpha: float
+
+
+def inference_time_scaling_law(
+    tau: float,
+    alpha: float,
+    max_n: int = 50,
+) -> InferenceScalingResult:
+    """Compute the inference-time scaling law for faithfulness.
+
+    For each N in [1, max_n], computes:
+        Pr[m(c) >= tau] <= exp(-N * D(tau || alpha))
+
+    This demonstrates the exponential decay in hallucination acceptance
+    as a function of recursion depth N (Proposition 1).
+
+    Args:
+        tau: support mass threshold
+        alpha: per-view false-positive rate (must be < tau)
+        max_n: maximum number of views to compute
+
+    Returns:
+        InferenceScalingResult with N values and corresponding bounds.
+    """
+    if alpha >= tau:
+        raise ValueError(f"alpha ({alpha}) must be < tau ({tau})")
+
+    ns = list(range(1, max_n + 1))
+    bounds = [hallucination_upper_bound(n, tau, alpha) for n in ns]
+    return InferenceScalingResult(
+        n_views_sequence=ns,
+        bounds_sequence=bounds,
+        tau=tau,
+        alpha=alpha,
+    )
+
+
 @dataclass
 class ViewAllocationResult:
-    """Result of optimal view allocation across claims."""
+    """Result of optimal view allocation across claims (Proposition 3)."""
 
     allocations: dict[str, int]  # node_id -> number of views to allocate
     total_views: int
@@ -136,14 +248,16 @@ def optimal_view_allocation(
     alpha: float,
     min_per_node: int = 1,
 ) -> ViewAllocationResult:
-    """Allocate a verification budget across claims optimally.
+    """Proposition 3: Optimal Compute Allocation.
 
-    Implements the knapsack / bandit objective from Proposition 2:
-    allocate more views to claims with higher priority scores.
+    Let each verification view have cost k. Under budget B, the optimal
+    policy allocates views to claims maximizing:
+        E[Delta Verified Utility] / k
+    This reduces to a bandit / knapsack allocation problem over claims.
 
     The priority score combines:
-        - utility contribution
-        - uncertainty (support mass near threshold)
+        - utility contribution (how important is this claim to the answer)
+        - uncertainty (support mass near threshold tau)
         - risk (safety-critical claims)
 
     Uses a greedy proportional allocation:

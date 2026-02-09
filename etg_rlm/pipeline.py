@@ -1,17 +1,19 @@
 """ETG Pipeline: end-to-end Evidence-Typed Generation.
 
-Orchestrates the full ETG process:
-    1. Extract atomic claims from generated text (claim compilation)
-    2. Build the ESBG by proposing nodes and dependency edges
-    3. Run multi-view verification on each claim node
-    4. Type-check the graph
-    5. Render only well-typed (Verified) claims into the final output
+Orchestrates the full ETG process as a type-directed compiler:
+    1. Extract atomic claims from generated text: A(y) -> {c_1, ..., c_m}
+    2. Build the ESBG (Definition 1) by proposing nodes and dependency edges
+    3. Run multi-view verification (Definition 3) on each claim node
+    4. Type-check the graph (Definition 4)
+    5. Apply constrained decoding (Definition 5): render only V^tau
 
-The constrained decoding formulation:
+The constrained decoding formulation (Section 4.6):
+    V^tau = {v in V | type(pi(v)) = Verified}
+    Y(G_T, tau) = {y | A(y) subset {pi(v) : v in V^tau}}
     y* = argmax_{y in Y(G_T, tau)} log p_theta(y | q, E)
 
-where Y(G_T, tau) = {y : A(y) subset {pi(v) : v in V^tau}} is the
-set of texts whose claims are all in the verified node set.
+Key result: unsupported claims are unrepresentable in the output space.
+This is mechanism design, not behavioral alignment.
 """
 
 from __future__ import annotations
@@ -120,10 +122,10 @@ class ETGPipeline:
 
     The RLM acts as a type-directed compiler:
         1. Compile (q, E) into ESBG via claim extraction + verification
-        2. Type-check claims via the evidence type system
-        3. Render only well-typed outputs
+        2. Type-check claims via the evidence type system (Definition 4)
+        3. Apply constrained decoding (Definition 5): render only V^tau
 
-    Proposition 3 (Read/Write separation):
+    Proposition 2 (Zero-Confabulation Property):
     Under ETG constraints, confabulation probability is zero by construction
     (unless the verifier produces false positives). A confabulation event is
     defined as emitting a claim without evidence pointers. Since every

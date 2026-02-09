@@ -1,11 +1,13 @@
-"""Tests for theoretical bounds (Proposition 1 and compute allocation)."""
+"""Tests for theoretical bounds (Propositions 1-3, Section 6)."""
 
 import math
 
 import pytest
 
 from etg_rlm.bounds import (
+    check_zero_confabulation,
     hallucination_upper_bound,
+    inference_time_scaling_law,
     kl_bernoulli,
     optimal_view_allocation,
     required_views_for_bound,
@@ -144,3 +146,74 @@ class TestOptimalViewAllocation:
         )
         total = sum(result.allocations.values())
         assert total == 2  # Can only allocate 2
+
+
+class TestZeroConfabulation:
+    """Tests for Proposition 2: Zero-Confabulation Property."""
+
+    def test_satisfies_when_all_have_evidence(self):
+        result = check_zero_confabulation(
+            verified_node_ids={"a", "b"},
+            node_evidence_counts={"a": 3, "b": 2},
+            node_support_masses={"a": 0.9, "b": 0.8},
+            tau=0.7,
+        )
+        assert result.satisfies_proposition is True
+        assert result.confabulating_node_ids == []
+        assert result.total_verified_nodes == 2
+
+    def test_fails_when_node_has_no_evidence(self):
+        result = check_zero_confabulation(
+            verified_node_ids={"a", "b"},
+            node_evidence_counts={"a": 3, "b": 0},  # b has no evidence
+            node_support_masses={"a": 0.9, "b": 0.8},
+            tau=0.7,
+        )
+        assert result.satisfies_proposition is False
+        assert "b" in result.confabulating_node_ids
+
+    def test_fails_when_mass_below_tau(self):
+        result = check_zero_confabulation(
+            verified_node_ids={"a"},
+            node_evidence_counts={"a": 3},
+            node_support_masses={"a": 0.5},  # below tau
+            tau=0.7,
+        )
+        assert result.satisfies_proposition is False
+        assert "a" in result.confabulating_node_ids
+
+    def test_empty_verified_set(self):
+        result = check_zero_confabulation(
+            verified_node_ids=set(),
+            node_evidence_counts={},
+            node_support_masses={},
+            tau=0.7,
+        )
+        assert result.satisfies_proposition is True
+        assert result.total_verified_nodes == 0
+
+
+class TestInferenceTimeScalingLaw:
+    """Tests for the inference-time scaling law (Proposition 1 visualization)."""
+
+    def test_monotonically_decreasing(self):
+        result = inference_time_scaling_law(tau=0.7, alpha=0.1, max_n=20)
+        assert len(result.n_views_sequence) == 20
+        assert len(result.bounds_sequence) == 20
+        # Bounds should be monotonically decreasing
+        for i in range(1, len(result.bounds_sequence)):
+            assert result.bounds_sequence[i] <= result.bounds_sequence[i - 1]
+
+    def test_approaches_zero(self):
+        result = inference_time_scaling_law(tau=0.7, alpha=0.1, max_n=50)
+        assert result.bounds_sequence[-1] < 1e-6
+
+    def test_invalid_alpha_ge_tau(self):
+        with pytest.raises(ValueError):
+            inference_time_scaling_law(tau=0.5, alpha=0.5)
+
+    def test_result_fields(self):
+        result = inference_time_scaling_law(tau=0.8, alpha=0.2, max_n=10)
+        assert result.tau == 0.8
+        assert result.alpha == 0.2
+        assert result.n_views_sequence == list(range(1, 11))

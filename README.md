@@ -2,47 +2,82 @@
 
 **Evidence-Typed Generation: Faithfulness as a Type System for Recursive Language Models**
 
-A formal framework that treats hallucination control as static type checking over an Evidence-Scoped Belief Graph (ESBG). Claims extracted from model outputs are typed by their multi-view support mass, and only well-typed (evidence-entailed) claims are rendered into the final output.
+> We show that hallucinations arise from read/write entanglement in next-token decoding, and introduce Evidence-Typed Generation -- an RLM-native inference framework that externalizes belief into evidence-scoped graphs and restricts generation to well-typed, entailed claims, yielding exponential suppression of hallucinations under inference-time scaling.
 
-## Core Concepts
+## Paper Structure (implemented)
 
-### Evidence-Scoped Belief Graph (ESBG)
+| Section | Topic | Module |
+|---------|-------|--------|
+| 4.1 | Problem setup, claim extraction | `core.py` |
+| 4.2 | Evidence-Scoped Belief Graph (Definition 1) | `core.py` |
+| 4.3 | Multi-view verification (Definitions 2-3) | `verification.py` |
+| 4.4 | Evidence typing system (Definition 4) | `type_system.py` |
+| 4.5 | Recursive graph construction policy | `policy.py` |
+| 4.6 | Constrained decoding (Definition 5) | `algorithm.py`, `type_system.py` |
+| 5 | EBRG algorithm (pseudocode) | `algorithm.py` |
+| 6 | Propositions 1-3 (theoretical bounds) | `bounds.py` |
 
-A directed acyclic graph `G = (V, ->, pi, sigma)` where each node carries:
-- **pi(v)**: an atomic claim extracted from the generated text
-- **sigma(v)**: evidence spans in the source corpus that support the claim
-- **m(v)**: support mass computed across N independent verification views
-- **z(v)**: entailment status (entailed, contradicted, unknown)
+## Formal Definitions
 
-### Multi-View Support Mass
+### Definition 1: Evidence-Scoped Belief Graph (ESBG)
 
-N independent verification views each check a claim against the evidence corpus. Views can differ by query rewrite strategy, chunking scheme, retriever model, or verifier prompting.
+A tuple `G = (V, ->, pi, sigma, m, z)` where:
+- **V**: set of nodes
+- **pi(v)**: atomic claim associated with node v
+- **sigma(v) subset S(E)**: evidence span pointers
+- **m(v) in [0,1]**: support mass
+- **z(v)**: entailment status {entailed, contradicted, unknown}
+- **u -> v**: dependency edge (claim v depends on claim u)
+
+The graph is a DAG, constructed at inference time.
+
+### Definition 2: Verification View
+
+A function `V_i : (E, c) -> (z_i, S_i)` where z_i is the entailment verdict and S_i is the supporting span set. Views differ by query rewriting, chunk boundaries, retriever randomness, verifier prompting, and negative sampling windows.
+
+### Definition 3: Support Mass
 
 ```
 m(c) = (1/N) * sum_{i=1}^{N} 1[z_i = entailed]
+sigma(c) = union_{i : z_i = entailed} S_i
 ```
 
-### Evidence Type System
+### Definition 4: Evidence Types
 
-Claims are typed by their support mass:
+```
+type(c) =
+    Verified      if m(c) >= tau
+    Uncertain     if tau' < m(c) < tau
+    Unsupported   if m(c) <= tau'
+```
 
-| Type | Condition | Renderable |
-|------|-----------|------------|
-| Verified | `m(c) >= tau` | Yes |
-| Uncertain | `tau' < m(c) < tau` | Configurable |
-| Unsupported | `m(c) <= tau'` | No |
+### Definition 5: Constrained Decoding
 
-The type-checker rejects any answer containing Unsupported claims.
+```
+V^tau = {v in V | type(pi(v)) = Verified}
+Y(G_T, tau) = {y | A(y) subset {pi(v) : v in V^tau}}
+y* = argmax_{y in Y(G_T, tau)} log p_theta(y | q, E)
+```
 
-### Hallucination Upper Bound (Proposition 1)
+Unsupported claims are **unrepresentable** in the output space.
 
-If the verifier has false-positive rate alpha per view, any unsupported claim has:
+## Theoretical Properties
+
+### Proposition 1: Exponential Suppression of Hallucinations
 
 ```
 Pr[m(c) >= tau] <= exp(-N * D(tau || alpha))
 ```
 
-where D is KL divergence for Bernoulli distributions. Unsupported claims become **exponentially unlikely** to pass the support-mass gate as N increases.
+Increasing N yields exponential decay in hallucination acceptance -- an **inference-time scaling law** for faithfulness.
+
+### Proposition 2: Zero-Confabulation Property
+
+Under exact entailment verification: `Pr[exists c in A(y*) s.t. supp(E,c) = empty] = 0`. Hallucination is eliminated by construction, not by reward shaping.
+
+### Proposition 3: Optimal Compute Allocation
+
+Under budget B, the optimal policy allocates views to claims maximizing `E[Delta Verified Utility] / k`. This reduces to a bandit / knapsack allocation problem.
 
 ## Installation
 
@@ -54,60 +89,70 @@ pip install -e ".[dev]"
 
 ```python
 from etg_rlm import (
-    ETGPipeline,
-    ETGConfig,
-    MultiViewVerifier,
-    EvidenceTypeChecker,
-    hallucination_upper_bound,
-    required_views_for_bound,
+    ebrg, AtomicClaim,
+    hallucination_upper_bound, inference_time_scaling_law,
+    check_zero_confabulation,
 )
 
-# Compute theoretical bounds
+# --- EBRG Algorithm (Section 5) ---
+result = ebrg(
+    query="What causes tides?",
+    claims=[
+        AtomicClaim(claim_id="c1", text="Tides are caused by gravitational pull."),
+        AtomicClaim(claim_id="c2", text="The moon's gravity is the primary driver."),
+    ],
+    views=your_views,     # list of VerificationView implementations
+    tau=0.7,              # support mass threshold
+    n_views_per_claim=5,  # views per claim
+    budget=50,
+)
+print(f"Verified: {[c.text for c in result.decoding.verified_claims]}")
+print(f"Rejected: {[c.text for c in result.decoding.rejected_claims]}")
+print(f"Hallucination bound: {result.hallucination_bound:.6f}")
+print(f"Zero-confabulation holds: {result.zero_confabulation_holds}")
+
+# --- Proposition 1: Inference-time scaling law ---
+scaling = inference_time_scaling_law(tau=0.7, alpha=0.1, max_n=50)
+for n, bound in zip(scaling.n_views_sequence, scaling.bounds_sequence):
+    print(f"  N={n:2d}  Pr[hallucination passes] <= {bound:.2e}")
+
+# --- Theoretical bounds ---
 bound = hallucination_upper_bound(n_views=10, tau=0.7, alpha=0.1)
-print(f"Hallucination bound with N=10: {bound:.6f}")
-
-n_needed = required_views_for_bound(target_prob=0.001, tau=0.7, alpha=0.1)
-print(f"Views needed for Pr < 0.001: {n_needed}")
-
-# Build a pipeline (bring your own claim extractor, retriever, verifier)
-config = ETGConfig(
-    tau=0.7,
-    tau_prime=0.3,
-    verification_budget=50,
-    min_views_per_claim=3,
-)
-pipeline = ETGPipeline(
-    claim_extractor=your_extractor,
-    views=your_views,
-    config=config,
-)
-result = pipeline.run(query="What is X?", generated_text="X is Y because Z.")
-print(f"Verified claims: {len(result.verified_claims)}")
-print(f"Rejected claims: {len(result.rejected_claims)}")
-print(f"Output: {result.rendered_text}")
+print(f"Bound with N=10: {bound:.6f}")
 ```
 
 ## Architecture
 
 ```
 etg_rlm/
-  core.py          -- EvidenceSpan, AtomicClaim, ESBGNode, EvidenceScopedBeliefGraph
-  verification.py  -- VerificationView, MultiViewVerifier, support mass computation
-  type_system.py   -- TypeThresholds, EvidenceTypeChecker (Verified/Uncertain/Unsupported)
-  policy.py        -- RecursionPolicy, UtilityWeightedPolicy, GreedyBudgetPolicy
-  bounds.py        -- hallucination_upper_bound, required_views_for_bound, optimal_view_allocation
-  pipeline.py      -- ETGPipeline, ETGConfig (end-to-end orchestration)
+  core.py          -- Definitions 1, 4: EvidenceSpan, AtomicClaim, ESBG
+  verification.py  -- Definitions 2-3: VerificationView, MultiViewVerifier
+  type_system.py   -- Definitions 4-5: EvidenceTypeChecker, constrained output space
+  policy.py        -- Section 4.5: RecursionPolicy, UtilityWeightedPolicy
+  bounds.py        -- Propositions 1-3: hallucination bounds, zero-confabulation, allocation
+  algorithm.py     -- Section 5: ebrg(), constrained_decode()
+  pipeline.py      -- End-to-end ETGPipeline orchestration
 ```
 
 ## Running Tests
 
 ```bash
-pytest tests/ -v
+pytest tests/ -v    # 100 tests
 ```
 
-## Key Contributions
+## Why This Is Fundamentally New
 
-1. **ESBG**: An auditable belief DAG as intermediate representation
-2. **Support mass**: A multi-view scalar invariant with exponential filtering guarantees
-3. **ETG type system**: Faithfulness as a type constraint, not a reward signal
-4. **Inference-time scaling law**: Hallucination probability decreases exponentially with N
+| Prior approach | Limitation |
+|----------------|------------|
+| RAG | Retrieval != entailment |
+| Self-check | Single-view, gameable |
+| Chain-of-thought | Linear, ungrounded |
+| Constrained decoding | Syntax-level constraints |
+| Knowledge graphs | Static, offline |
+
+ETG introduces:
+1. **ESBG**: A dynamic, evidence-scoped belief DAG (not chain-of-thought)
+2. **Support mass**: A multi-view stability invariant with exponential filtering
+3. **Evidence-Typed Decoding**: Faithfulness as a type constraint, not a reward
+4. **Inference-time scaling law**: Provable hallucination suppression via N
+5. **Zero-confabulation by construction**: Mechanism design, not behavioral alignment

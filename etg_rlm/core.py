@@ -1,10 +1,25 @@
-"""Core data structures for Evidence-Typed Generation.
+"""Core data structures for Evidence-Typed Generation (Section 4.2).
 
-Defines the Evidence-Scoped Belief Graph (ESBG) and its components:
-- EvidenceSpan: a pointer into the source corpus E
-- AtomicClaim: an extracted factual assertion
-- ESBGNode: a node in the belief graph carrying a claim, evidence, and type
-- EvidenceScopedBeliefGraph: the DAG G = (V, ->, pi, sigma)
+Implements Definition 1 (ESBG) from the paper:
+
+    An ESBG is a tuple G = (V, ->, pi, sigma, m, z) where:
+      - V: set of nodes
+      - pi(v): atomic claim associated with node v
+      - sigma(v) subset S(E): evidence span pointers
+      - m(v) in [0,1]: support mass
+      - z(v) in {entailed, contradicted, unknown}
+      - u -> v: dependency edge (claim v depends on claim u)
+
+    The graph is a DAG. ESBGs are constructed at inference time,
+    not pre-computed or static.
+
+A claim c is entailed iff:
+    exists s in S(E) s.t. E[s] |= c
+
+The structural mismatch motivating ETG: the classical LLM objective
+    y* = argmax_y log p_theta(y | q, E)
+does not penalize hallucinations unless the training distribution
+explicitly does.
 """
 
 from __future__ import annotations
@@ -25,12 +40,16 @@ class ClaimStatus(Enum):
 
 
 class ClaimType(Enum):
-    """Evidence type assigned by the ETG type checker.
+    """Evidence type assigned by the ETG type checker (Definition 4).
 
-    type(c) =
-        Verified      if m(c) >= tau
-        Uncertain     if tau' < m(c) < tau
-        Unsupported   if m(c) <= tau'
+    For thresholds tau > tau':
+
+        type(c) =
+            Verified      if m(c) >= tau
+            Uncertain     if tau' < m(c) < tau
+            Unsupported   if m(c) <= tau'
+
+    This enables static-style checking at decoding time.
     """
 
     VERIFIED = "verified"
@@ -40,10 +59,12 @@ class ClaimType(Enum):
 
 @dataclass(frozen=True)
 class EvidenceSpan:
-    """A span s in the source corpus E.
+    """A span s in S(E), the set of all addressable evidence spans.
 
-    Represents (doc_id, start, end) — a contiguous region of text
-    in a specific document that supports (or contradicts) a claim.
+    Represents (doc_id, start, end) -- a contiguous region of text
+    in a specific document. Used in the support relation:
+        supp(E, c) subset S(E)
+    returning spans s in E that entailedly support claim c.
     """
 
     doc_id: str
@@ -62,7 +83,11 @@ class EvidenceSpan:
 class AtomicClaim:
     """An atomic factual assertion extracted from a generated answer.
 
-    Produced by the claim extractor A(y) -> {c_1, ..., c_m}.
+    Produced by the atomic claim decomposition operator (Section 4.1):
+        A(y) = {c_1, ..., c_m}
+
+    A claim c is grounded iff exists s in supp(E, c).
+    A claim c is hallucinated iff supp(E, c) = empty set.
     """
 
     claim_id: str
@@ -80,14 +105,14 @@ class AtomicClaim:
 
 @dataclass
 class ESBGNode:
-    """A node v in the Evidence-Scoped Belief Graph.
+    """A node v in the Evidence-Scoped Belief Graph (Definition 1).
 
-    Carries:
-      - pi(v) = claim: the atomic claim
-      - sigma(v) = evidence_spans: set of supporting spans in E
+    Each node in G = (V, ->, pi, sigma, m, z) carries:
+      - pi(v) = claim: atomic claim associated with node v
+      - sigma(v) = evidence_spans: evidence span pointers, subset S(E)
       - m(v) = support_mass: multi-view support mass in [0, 1]
-      - z(v) = status: entailment status
-      - type(v) = claim_type: evidence type (assigned by type checker)
+      - z(v) = status: entailment status {entailed, contradicted, unknown}
+      - type(v) = claim_type: evidence type (Definition 4, assigned by type checker)
     """
 
     node_id: str
@@ -108,16 +133,20 @@ class ESBGNode:
 
 
 class EvidenceScopedBeliefGraph:
-    """Evidence-Scoped Belief Graph (ESBG).
+    """Evidence-Scoped Belief Graph -- Definition 1 (Section 4.2).
 
-    A directed acyclic graph G = (V, ->, pi, sigma) where:
-      - V: set of ESBGNode (each carrying a claim)
-      - ->: dependency edges (u -> v means c_v depends on c_u)
-      - pi: node -> claim mapping (stored in ESBGNode)
-      - sigma: node -> evidence spans mapping (stored in ESBGNode)
+    An ESBG is a tuple G = (V, ->, pi, sigma, m, z) where:
+      - V: set of nodes
+      - pi(v): atomic claim associated with node v
+      - sigma(v) subset S(E): evidence span pointers
+      - m(v) in [0,1]: support mass (Definition 3)
+      - z(v) in {entailed, contradicted, unknown}
+      - u -> v: dependency edge (claim v depends on claim u)
 
-    Edges u -> v indicate logical, definitional, or compositional dependency:
-    claim c_v requires c_u.
+    The graph is a DAG. ESBGs are constructed at inference time via the
+    recursive graph construction policy rho (Section 4.5), not pre-computed
+    or static. This is not "chain-of-thought" -- it is an externalized
+    belief structure with explicit provenance.
     """
 
     def __init__(self) -> None:

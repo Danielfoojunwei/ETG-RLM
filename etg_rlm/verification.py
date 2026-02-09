@@ -1,17 +1,23 @@
-"""Multi-view verification and support mass computation.
+"""Multi-view evidence verification (Section 4.3).
 
-Implements the N independent "views" of retrieval + verification:
-    V_i(E, c) -> (z_i, S_i)
-where z_i is the entailment verdict and S_i is the supporting span set.
+Implements Definitions 2 and 3 from the paper.
 
-Views can differ by query rewrite, chunking scheme, retriever seed,
-verifier prompting, negative sampling window, etc.
+Definition 2 (Verification View):
+    A verification view V_i is a function:
+        V_i : (E, c) -> (z_i, S_i)
+    where z_i in {entailed, contradicted, not-found} and S_i subset S(E).
+    Views differ by query rewriting, chunk boundaries, retriever randomness,
+    verifier prompting, and negative sampling windows.
 
-Support mass is defined as:
-    m(c) = (1/N) * sum_{i=1}^{N} 1[z_i = entailed]
+Definition 3 (Support Mass):
+    Given N independent views:
+        m(c) = (1/N) * sum_{i=1}^{N} 1[z_i = entailed]
+    Evidence pointers aggregate as:
+        sigma(c) = union_{i : z_i = entailed} S_i
 
-Evidence set aggregation:
-    sigma(c) = union_{i: z_i = entailed} S_i
+Motivation: Single-view verification is brittle. Hallucinated claims often
+pass under one retrieval or chunking but fail under others. Support mass
+is a stability invariant across multiple independent evidence views.
 """
 
 from __future__ import annotations
@@ -75,15 +81,18 @@ class EntailmentVerifier(Protocol):
 
 
 class VerificationView(ABC):
-    """A single verification view V_i.
+    """A single verification view V_i (Definition 2).
 
-    Each view represents an independent pathway for checking whether
-    a claim is supported by evidence in the corpus. Views can differ by:
-        - query rewrite strategy
-        - chunking scheme
-        - retriever seed / model
-        - verifier prompting strategy
-        - negative sampling window
+    A verification view is a function:
+        V_i : (E, c) -> (z_i, S_i)
+    where z_i in {entailed, contradicted, not-found} and S_i subset S(E).
+
+    Views differ by:
+        - query rewriting
+        - chunk boundaries
+        - retriever randomness
+        - verifier prompting
+        - negative sampling windows
     """
 
     def __init__(self, view_id: str) -> None:
@@ -141,16 +150,17 @@ class QueryRewriter(Protocol):
 
 
 class MultiViewVerifier:
-    """Runs N independent verification views and computes support mass.
+    """Runs N independent verification views and computes support mass (Definition 3).
 
     Given N views {V_1, ..., V_N}, for each claim c:
         1. Run each view: V_i(E, c) -> (z_i, S_i)
-        2. Compute support mass: m(c) = (1/N) * sum 1[z_i = entailed]
+        2. Compute support mass: m(c) = (1/N) * sum_{i=1}^{N} 1[z_i = entailed]
         3. Aggregate evidence: sigma(c) = union_{i: z_i=entailed} S_i
         4. Determine overall status based on majority verdict
 
-    The key insight is that hallucinations are typically unstable under
-    multi-view scrutiny; supported claims persist across views.
+    Hallucinations are typically unstable under multi-view scrutiny;
+    supported claims persist. This becomes a formal, measurable quantity
+    treated as an "evidence invariant" (Section 4.3).
     """
 
     def __init__(self, views: list[VerificationView]) -> None:

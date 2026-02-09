@@ -1,19 +1,28 @@
-"""Evidence-Typed Generation (ETG) Type System.
+"""Evidence-Typed Generation (ETG) Type System (Section 4.4, 4.6).
 
-Treats each claim c as having a "type" given by its support mass:
+Implements Definition 4 (Evidence Types) and Definition 5 (Well-Typed Output Space).
 
-    type(c) =
-        Verified      if m(c) >= tau
-        Uncertain     if tau' < m(c) < tau
-        Unsupported   if m(c) <= tau'
+Definition 4 (Evidence Types):
+    For thresholds tau > tau':
+        type(c) =
+            Verified      if m(c) >= tau
+            Uncertain     if tau' < m(c) < tau
+            Unsupported   if m(c) <= tau'
+    This enables static-style checking at decoding time.
+
+Definition 5 (Well-Typed Output Space):
+    V^tau = {v in V | type(pi(v)) = Verified}
+    Y(G_T, tau) = {y | A(y) subset {pi(v) : v in V^tau}}
+    y* = argmax_{y in Y(G_T, tau)} log p_theta(y | q, E)
 
 The type-checker rejects an answer if it contains Unsupported claims.
-The RLM acts as a type-directed compiler:
+The RLM is a type-directed compiler:
     1. Compile (q, E) into ESBG
     2. Type-check claims
     3. Render only well-typed outputs
 
-Hallucination control becomes static checking rather than prompting.
+Key result: unsupported claims are unrepresentable in the output space.
+This is mechanism design, not behavioral alignment.
 """
 
 from __future__ import annotations
@@ -139,12 +148,19 @@ class EvidenceTypeChecker:
     def renderable_claims(
         self, esbg: EvidenceScopedBeliefGraph
     ) -> set[str]:
-        """Return the set of node IDs whose claims can be rendered.
+        """Return the set of node IDs whose claims can be rendered (Definition 5).
 
-        V^tau = {v in V : m(pi(v)) >= tau AND z(v) = entailed}
+        V^tau = {v in V | type(pi(v)) = Verified}
 
-        This defines the allowed output space Y(G_T, tau): the set of
-        texts whose claims are all in V^tau.
+        The allowed output space is:
+            Y(G_T, tau) = {y | A(y) subset {pi(v) : v in V^tau}}
+
+        Final decoding objective:
+            y* = argmax_{y in Y(G_T, tau)} log p_theta(y | q, E)
+
+        Dependency-aware: a node is only renderable if all its
+        predecessors in the DAG are also renderable. This ensures
+        compositional claims inherit grounding from their foundations.
         """
         renderable: set[str] = set()
         for node in esbg.topological_order():
