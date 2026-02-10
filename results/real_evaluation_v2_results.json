@@ -1,0 +1,61 @@
+{
+  "dataset": "TruthfulQA (Lin et al., ACL 2022)",
+  "n_instances": 817,
+  "n_claims": 5865,
+  "n_correct": 2577,
+  "n_incorrect": 3288,
+  "models": {
+    "DeBERTa-v3-small": {
+      "arch": "DeBERTa",
+      "params": "22M"
+    },
+    "DistilRoBERTa": {
+      "arch": "DistilRoBERTa",
+      "params": "82M"
+    },
+    "MiniLM": {
+      "arch": "MiniLM",
+      "params": "22M"
+    },
+    "RoBERTa-base": {
+      "arch": "RoBERTa",
+      "params": "125M"
+    },
+    "BART-large": {
+      "arch": "BART",
+      "params": "407M"
+    }
+  },
+  "per_model_tpr": {
+    "DeBERTa-v3-small": 0.4928211098176174,
+    "DistilRoBERTa": 0.5118354675979822,
+    "MiniLM": 0.5126115638339154,
+    "RoBERTa-base": 0.512999611951882,
+    "BART-large": 0.5021342646488165
+  },
+  "per_model_fpr": {
+    "DeBERTa-v3-small": 0.017335766423357664,
+    "DistilRoBERTa": 0.037408759124087594,
+    "MiniLM": 0.029501216545012164,
+    "RoBERTa-base": 0.023418491484184914,
+    "BART-large": 0.017335766423357664
+  },
+  "proof_1_exponential_suppression": {
+    "avg_alpha": 0.025,
+    "theoretical_bound_tau06": 0.00043,
+    "empirical_fpr_tau06": 0.019161,
+    "bound_holds": false
+  },
+  "proof_2_multiview_vs_single_large": {
+    "bart_large_precision": 0.9578,
+    "bart_large_fpr": 0.0173,
+    "etg_5model_precision": 0.954,
+    "etg_5model_fpr": 0.0192
+  },
+  "proof_4_e2e": {
+    "n_generated_sentences": 546,
+    "unfiltered_factscore": 0.0586,
+    "etg_filtered_factscore": 0.7429
+  },
+  "total_runtime_seconds": 622.1
+}

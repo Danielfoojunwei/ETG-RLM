@@ -1,0 +1,289 @@
+{
+  "version": "v3",
+  "fixes_applied": [
+    "Independent paradigms (NLI, STS, Retrieval, QA, Lexical)",
+    "Rich evidence construction (question + answer)",
+    "Per-paradigm threshold calibration (Youden's J)",
+    "Precision-focused calibration (target FPR = 0.05)",
+    "Weighted voting option",
+    "Precision-recall curve analysis"
+  ],
+  "dataset": "TruthfulQA (Lin et al., ACL 2022)",
+  "n_instances": 817,
+  "n_claims": 5865,
+  "n_correct": 2577,
+  "n_incorrect": 3288,
+  "paradigms": {
+    "NLI": {
+      "model": "facebook/bart-large-mnli",
+      "training_data": "MNLI (Williams et al., 2018)",
+      "task": "Entailment classification",
+      "youden_threshold": 0.01,
+      "youden_tpr": 0.7260380287155608,
+      "youden_fpr": 0.11070559610705596,
+      "youdens_j": 0.6153324326085048,
+      "pf_threshold": 0.062,
+      "pf_tpr": 0.6367869615832363,
+      "pf_fpr": 0.04927007299270073
+    },
+    "STS": {
+      "model": "cross-encoder/stsb-roberta-base",
+      "training_data": "STS-B (Cer et al., 2017)",
+      "task": "Semantic similarity regression",
+      "youden_threshold": 0.02,
+      "youden_tpr": 0.5397749320915793,
+      "youden_fpr": 0.19130170316301703,
+      "youdens_j": 0.3484732289285623,
+      "pf_threshold": 0.086,
+      "pf_tpr": 0.3372138145129996,
+      "pf_fpr": 0.04866180048661801
+    },
+    "Retrieval": {
+      "model": "sentence-transformers/msmarco-MiniLM-L-6-v3",
+      "training_data": "MS MARCO (Nguyen et al., 2016)",
+      "task": "Passage relevance scoring",
+      "youden_threshold": 0.89,
+      "youden_tpr": 0.3410942956926659,
+      "youden_fpr": 0.17670316301703162,
+      "youdens_j": 0.1643911326756343,
+      "pf_threshold": 0.936,
+      "pf_tpr": 0.15250291036088476,
+      "pf_fpr": 0.048357664233576646
+    },
+    "Multi-QA": {
+      "model": "sentence-transformers/multi-qa-MiniLM-L6-cos-v1",
+      "training_data": "215M QA pairs (diverse sources)",
+      "task": "Question-answer matching",
+      "youden_threshold": 0.9,
+      "youden_tpr": 0.3818393480791618,
+      "youden_fpr": 0.18856447688564476,
+      "youdens_j": 0.19327487119351705,
+      "pf_threshold": 0.94,
+      "pf_tpr": 0.19518820333721382,
+      "pf_fpr": 0.049574209245742094
+    },
+    "Lexical": {
+      "model": null,
+      "training_data": "None (pure algorithm)",
+      "task": "ROUGE-L token overlap",
+      "youden_threshold": 0.56,
+      "youden_tpr": 0.26232052774544046,
+      "youden_fpr": 0.04683698296836983,
+      "youdens_j": 0.21548354477707063,
+      "pf_threshold": 0.56,
+      "pf_tpr": 0.26232052774544046,
+      "pf_fpr": 0.04683698296836983
+    }
+  },
+  "avg_pairwise_agreement": 0.9209,
+  "proof_1_exponential_suppression": {
+    "youden_calibration": {
+      "avg_alpha": 0.142822,
+      "results_by_tau": {
+        "0.4": {
+          "theoretical": 0.37173315,
+          "empirical": 0.19495134,
+          "holds": true,
+          "ratio": 0.52
+        },
+        "0.6": {
+          "theoretical": 0.06193794,
+          "empirical": 0.07481752,
+          "holds": false,
+          "ratio": 1.21
+        },
+        "0.8": {
+          "theoretical": 0.00435378,
+          "empirical": 0.02402676,
+          "holds": false,
+          "ratio": 5.52
+        },
+        "1.0": {
+          "theoretical": 5.943e-05,
+          "empirical": 0.00395377,
+          "holds": false,
+          "ratio": 66.53
+        }
+      },
+      "n_holds": 1
+    },
+    "precision_focused_calibration": {
+      "target_fpr": 0.05,
+      "avg_alpha": 0.04854,
+      "results_by_tau": {
+        "0.4": {
+          "theoretical": 0.05872186,
+          "empirical": 0.05048662,
+          "holds": true,
+          "ratio": 0.86
+        },
+        "0.6": {
+          "theoretical": 0.00299578,
+          "empirical": 0.01186131,
+          "holds": false,
+          "ratio": 3.96
+        },
+        "0.8": {
+          "theoretical": 6.448e-05,
+          "empirical": 0.00364964,
+          "holds": false,
+          "ratio": 56.6
+        },
+        "1.0": {
+          "theoretical": 2.7e-07,
+          "empirical": 0.00121655,
+          "holds": false,
+          "ratio": 4514.64
+        }
+      },
+      "n_holds": 1
+    },
+    "status": "PARTIALLY PROVEN"
+  },
+  "proof_2_multiview_vs_single": {
+    "best_single": "NLI",
+    "best_single_f1": 0.7776,
+    "best_single_precision": 0.8371,
+    "etg_f1": 0.769,
+    "etg_precision": 0.7977,
+    "high_precision_regime": {
+      "etg_recall_at_90_prec": 0.2452,
+      "nli_recall_at_90_prec": 0.6465,
+      "etg_dominates": false
+    },
+    "precision_dominance": [
+      {
+        "tau": 0.2,
+        "etg_precision": 0.7547,
+        "etg_recall": 0.6888,
+        "nli_precision_matched": 0.7989,
+        "nli_recall_at_matched": 0.7664,
+        "etg_wins": false
+      },
+      {
+        "tau": 0.4,
+        "etg_precision": 0.8514,
+        "etg_recall": 0.369,
+        "nli_precision_matched": 0.8577,
+        "nli_recall_at_matched": 0.7062,
+        "etg_wins": false
+      },
+      {
+        "tau": 0.6,
+        "etg_precision": 0.9419,
+        "etg_recall": 0.2452,
+        "nli_precision_matched": 0.9423,
+        "nli_recall_at_matched": 0.5832,
+        "etg_wins": false
+      },
+      {
+        "tau": 0.8,
+        "etg_precision": 0.9738,
+        "etg_recall": 0.1731,
+        "nli_precision_matched": 0.974,
+        "nli_recall_at_matched": 0.4804,
+        "etg_wins": false
+      },
+      {
+        "tau": 1.0,
+        "etg_precision": 0.9858,
+        "etg_recall": 0.1079,
+        "nli_precision_matched": 0.9892,
+        "nli_recall_at_matched": 0.2138,
+        "etg_wins": false
+      }
+    ],
+    "status": "NOT PROVEN \u2014 single paradigm matches or beats ETG"
+  },
+  "proof_3_superiority": {
+    "etg_f1": 0.769,
+    "best_single_f1": 0.7776,
+    "etg_max_precision": 0.9858,
+    "nli_max_precision": 1.0,
+    "etg_beats_all_f1": false,
+    "etg_surpasses_precision_ceiling": false,
+    "status": "PARTIALLY PROVEN \u2014 ETG beats 4/5 on F1, check precision regime"
+  },
+  "proof_4_e2e": {
+    "n_generated_sentences": 552,
+    "unfiltered_factscore": 0.3025,
+    "etg_filtered_factscore": 0.4839,
+    "improvement": 0.1813,
+    "proven": true
+  },
+  "single_paradigm_results": {
+    "NLI": {
+      "precision": 0.8371,
+      "recall": 0.726,
+      "f1": 0.7776,
+      "halluc_rate": 0.1629,
+      "fpr": 0.1107
+    },
+    "STS": {
+      "precision": 0.6886,
+      "recall": 0.5398,
+      "f1": 0.6052,
+      "halluc_rate": 0.3114,
+      "fpr": 0.1913
+    },
+    "Retrieval": {
+      "precision": 0.6021,
+      "recall": 0.3411,
+      "f1": 0.4355,
+      "halluc_rate": 0.3979,
+      "fpr": 0.1767
+    },
+    "Multi-QA": {
+      "precision": 0.6135,
+      "recall": 0.3818,
+      "f1": 0.4707,
+      "halluc_rate": 0.3865,
+      "fpr": 0.1886
+    },
+    "Lexical": {
+      "precision": 0.8145,
+      "recall": 0.2623,
+      "f1": 0.3968,
+      "halluc_rate": 0.1855,
+      "fpr": 0.0468
+    }
+  },
+  "agreement_matrix": {
+    "NLI": {
+      "NLI": 1.0,
+      "STS": 0.9252,
+      "Retrieval": 0.9085,
+      "Multi-QA": 0.9085,
+      "Lexical": 0.9106
+    },
+    "STS": {
+      "NLI": 0.9252,
+      "STS": 1.0,
+      "Retrieval": 0.9182,
+      "Multi-QA": 0.9133,
+      "Lexical": 0.9221
+    },
+    "Retrieval": {
+      "NLI": 0.9085,
+      "STS": 0.9182,
+      "Retrieval": 1.0,
+      "Multi-QA": 0.9568,
+      "Lexical": 0.9273
+    },
+    "Multi-QA": {
+      "NLI": 0.9085,
+      "STS": 0.9133,
+      "Retrieval": 0.9568,
+      "Multi-QA": 1.0,
+      "Lexical": 0.9188
+    },
+    "Lexical": {
+      "NLI": 0.9106,
+      "STS": 0.9221,
+      "Retrieval": 0.9273,
+      "Multi-QA": 0.9188,
+      "Lexical": 1.0
+    }
+  },
+  "total_runtime_seconds": 719.1
+}

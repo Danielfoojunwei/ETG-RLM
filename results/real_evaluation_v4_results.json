@@ -1,0 +1,404 @@
+{
+  "version": "v4",
+  "improvements": [
+    "3 strong paradigms only (dropped weak STS/Retrieval/Multi-QA/Lexical)",
+    "LLM-as-Judge (Flan-T5) and QA verification (SQuAD 2.0)",
+    "Calibration/evaluation split (30/70) \u2014 no data snooping",
+    "Learned meta-classifier (logistic regression with interactions)",
+    "E2E with Qwen/Qwen2.5-1.5B-Instruct (1.5B)"
+  ],
+  "dataset": "TruthfulQA (Lin et al., ACL 2022)",
+  "n_questions": 817,
+  "n_claims": 5865,
+  "n_correct": 2577,
+  "n_incorrect": 3288,
+  "calibration_split": {
+    "n_questions": 245,
+    "n_claims": 1697
+  },
+  "evaluation_split": {
+    "n_questions": 572,
+    "n_claims": 4168
+  },
+  "paradigms": {
+    "NLI": {
+      "model": "facebook/bart-large-mnli",
+      "training": "MNLI",
+      "task": "Entailment classification",
+      "youden": {
+        "threshold": 0.008,
+        "tpr": 0.7477124183006536,
+        "fpr": 0.1223175965665236,
+        "j": 0.62539482173413
+      },
+      "precision_focused": {
+        "threshold": 0.056,
+        "tpr": 0.6535947712418301,
+        "fpr": 0.04935622317596566
+      },
+      "eval_metrics": {
+        "precision": 0.8234932349323493,
+        "recall": 0.7389624724061811,
+        "f1": 0.7789412449098313,
+        "halluc_rate": 0.17650676506765067,
+        "fpr": 0.1223175965665236,
+        "tp": 1339,
+        "fp": 287,
+        "fn": 473,
+        "tn": 2069,
+        "threshold": 0.008,
+        "tpr": 0.7477124183006536,
+        "j": 0.62539482173413
+      }
+    },
+    "LLM-Judge": {
+      "model": "google/flan-t5-large",
+      "training": "1800+ tasks",
+      "task": "Zero-shot reasoning",
+      "youden": {
+        "threshold": 0.218,
+        "tpr": 0.7633986928104575,
+        "fpr": 0.11587982832618025,
+        "j": 0.6475188644842772
+      },
+      "precision_focused": {
+        "threshold": 0.438,
+        "tpr": 0.6797385620915033,
+        "fpr": 0.04935622317596566
+      },
+      "eval_metrics": {
+        "precision": 0.8462974486621033,
+        "recall": 0.7505518763796909,
+        "f1": 0.7955542556303012,
+        "halluc_rate": 0.1537025513378967,
+        "fpr": 0.11587982832618025,
+        "tp": 1360,
+        "fp": 247,
+        "fn": 452,
+        "tn": 2109,
+        "threshold": 0.218,
+        "tpr": 0.7633986928104575,
+        "j": 0.6475188644842772
+      }
+    },
+    "QA": {
+      "model": "deepset/roberta-base-squad2",
+      "training": "SQuAD 2.0",
+      "task": "Extractive QA confidence",
+      "youden": {
+        "threshold": 0.004,
+        "tpr": 0.6888888888888889,
+        "fpr": 0.5675965665236051,
+        "j": 0.12129232236528376
+      },
+      "precision_focused": {
+        "threshold": 0.422,
+        "tpr": 0.0915032679738562,
+        "fpr": 0.04935622317596566
+      },
+      "eval_metrics": {
+        "precision": 0.494509963399756,
+        "recall": 0.6710816777041942,
+        "f1": 0.5694216811051276,
+        "halluc_rate": 0.505490036600244,
+        "fpr": 0.5675965665236051,
+        "tp": 1216,
+        "fp": 1243,
+        "fn": 596,
+        "tn": 1113,
+        "threshold": 0.004,
+        "tpr": 0.6888888888888889,
+        "j": 0.12129232236528376
+      }
+    }
+  },
+  "meta_classifier": {
+    "features": [
+      "NLI",
+      "LLM-Judge",
+      "QA",
+      "NLI*LLM-Judge",
+      "NLI*QA",
+      "LLM-Judge*QA"
+    ],
+    "weights": {
+      "NLI": 1.313779,
+      "LLM-Judge": 2.264573,
+      "QA": 0.256077,
+      "NLI*LLM-Judge": 0.839324,
+      "NLI*QA": -0.005127,
+      "LLM-Judge*QA": 0.163865
+    },
+    "bias": -1.314735,
+    "cal_f1": 0.7930775018811136
+  },
+  "aggregation_results": {
+    "Voting-Any (1/3)": {
+      "precision": 0.5479716677398584,
+      "recall": 0.9392935982339956,
+      "f1": 0.6921512810085401,
+      "halluc_rate": 0.45202833226014166,
+      "fpr": 0.5959252971137521,
+      "tp": 1702,
+      "fp": 1404,
+      "fn": 110,
+      "tn": 952
+    },
+    "Voting-Majority (2/3)": {
+      "precision": 0.8260095011876485,
+      "recall": 0.7676600441501104,
+      "f1": 0.7957665903890161,
+      "halluc_rate": 0.17399049881235154,
+      "fpr": 0.12436332767402376,
+      "tp": 1391,
+      "fp": 293,
+      "fn": 421,
+      "tn": 2063
+    },
+    "Voting-Unanimous (3/3)": {
+      "precision": 0.9113082039911308,
+      "recall": 0.45364238410596025,
+      "f1": 0.6057479734708917,
+      "halluc_rate": 0.08869179600886919,
+      "fpr": 0.03395585738539898,
+      "tp": 822,
+      "fp": 80,
+      "fn": 990,
+      "tn": 2276
+    },
+    "Weighted-0.3": {
+      "precision": 0.7816938453445555,
+      "recall": 0.8200883002207505,
+      "f1": 0.8004309183948289,
+      "halluc_rate": 0.2183061546554445,
+      "fpr": 0.1761460101867572,
+      "tp": 1486,
+      "fp": 415,
+      "fn": 326,
+      "tn": 1941
+    },
+    "Weighted-0.5": {
+      "precision": 0.8260095011876485,
+      "recall": 0.7676600441501104,
+      "f1": 0.7957665903890161,
+      "halluc_rate": 0.17399049881235154,
+      "fpr": 0.12436332767402376,
+      "tp": 1391,
+      "fp": 293,
+      "fn": 421,
+      "tn": 2063
+    },
+    "Weighted-0.7": {
+      "precision": 0.9106606606606606,
+      "recall": 0.6694260485651214,
+      "f1": 0.7716284987277353,
+      "halluc_rate": 0.08933933933933934,
+      "fpr": 0.05050933786078098,
+      "tp": 1213,
+      "fp": 119,
+      "fn": 599,
+      "tn": 2237
+    },
+    "Meta-0.5": {
+      "precision": 0.9327146171693735,
+      "recall": 0.6655629139072847,
+      "f1": 0.7768115942028986,
+      "halluc_rate": 0.06728538283062645,
+      "fpr": 0.036926994906621394,
+      "tp": 1206,
+      "fp": 87,
+      "fn": 606,
+      "tn": 2269
+    },
+    "Meta-0.6": {
+      "precision": 0.9530716723549488,
+      "recall": 0.6164459161147903,
+      "f1": 0.7486595174262736,
+      "halluc_rate": 0.04692832764505119,
+      "fpr": 0.0233446519524618,
+      "tp": 1117,
+      "fp": 55,
+      "fn": 695,
+      "tn": 2301
+    },
+    "Meta-0.7": {
+      "precision": 0.9729206963249516,
+      "recall": 0.5551876379690949,
+      "f1": 0.70695713281799,
+      "halluc_rate": 0.027079303675048357,
+      "fpr": 0.011884550084889643,
+      "tp": 1006,
+      "fp": 28,
+      "fn": 806,
+      "tn": 2328
+    }
+  },
+  "best_single": {
+    "name": "LLM-Judge",
+    "precision": 0.8462974486621033,
+    "recall": 0.7505518763796909,
+    "f1": 0.7955542556303012,
+    "halluc_rate": 0.1537025513378967,
+    "fpr": 0.11587982832618025,
+    "tp": 1360,
+    "fp": 247,
+    "fn": 452,
+    "tn": 2109,
+    "threshold": 0.218,
+    "tpr": 0.7633986928104575,
+    "j": 0.6475188644842772
+  },
+  "best_multi_view": {
+    "name": "Weighted-0.3",
+    "precision": 0.7816938453445555,
+    "recall": 0.8200883002207505,
+    "f1": 0.8004309183948289,
+    "halluc_rate": 0.2183061546554445,
+    "fpr": 0.1761460101867572,
+    "tp": 1486,
+    "fp": 415,
+    "fn": 326,
+    "tn": 1941
+  },
+  "pr_curve_comparison": [
+    {
+      "target_precision": 0.7,
+      "meta_precision": 0.7043828264758497,
+      "meta_recall": 0.8692052980132451,
+      "single_precision": 0.7008050089445438,
+      "single_recall": 0.8647902869757175,
+      "meta_wins": true
+    },
+    {
+      "target_precision": 0.75,
+      "meta_precision": 0.7584661354581673,
+      "meta_recall": 0.8405077262693157,
+      "single_precision": 0.7537462537462537,
+      "single_recall": 0.8327814569536424,
+      "meta_wins": true
+    },
+    {
+      "target_precision": 0.8,
+      "meta_precision": 0.8048645660585959,
+      "meta_recall": 0.8035320088300221,
+      "single_precision": 0.803399433427762,
+      "single_recall": 0.782560706401766,
+      "meta_wins": true
+    },
+    {
+      "target_precision": 0.85,
+      "meta_precision": 0.855,
+      "meta_recall": 0.7549668874172185,
+      "single_precision": 0.8513853904282116,
+      "single_recall": 0.7461368653421634,
+      "meta_wins": true
+    },
+    {
+      "target_precision": 0.9,
+      "meta_precision": 0.9015256588072122,
+      "meta_recall": 0.717439293598234,
+      "single_precision": 0.9004329004329005,
+      "single_recall": 0.6887417218543046,
+      "meta_wins": true
+    },
+    {
+      "target_precision": 0.95,
+      "meta_precision": 0.9501661129568106,
+      "meta_recall": 0.6313465783664459,
+      "single_precision": 0.9500891265597148,
+      "single_recall": 0.5883002207505519,
+      "meta_wins": true
+    }
+  ],
+  "proof_1": {
+    "youden": {
+      "0.334": {
+        "theoretical": 0.9689778133435667,
+        "empirical": 0.12436332767402376,
+        "holds": true,
+        "ratio": 0.13
+      },
+      "0.668": {
+        "theoretical": 0.3543678183636675,
+        "empirical": 0.03395585738539898,
+        "holds": true,
+        "ratio": 0.1
+      },
+      "1.000": {
+        "theoretical": 0.019377971364193797,
+        "empirical": 0.03395585738539898,
+        "holds": false,
+        "ratio": 1.75
+      }
+    },
+    "precision_focused": {
+      "0.334": {
+        "theoretical": 0.2990387326856856,
+        "empirical": 0.025891341256366725,
+        "holds": true,
+        "ratio": 0.09
+      },
+      "0.668": {
+        "theoretical": 0.015461277337050371,
+        "empirical": 0.003395585738539898,
+        "holds": true,
+        "ratio": 0.22
+      },
+      "1.000": {
+        "theoretical": 0.00012023357429721415,
+        "empirical": 0.003395585738539898,
+        "holds": false,
+        "ratio": 28.24
+      }
+    },
+    "avg_alpha_youden": 0.268598,
+    "avg_alpha_pf": 0.049356,
+    "status": "PARTIALLY PROVEN"
+  },
+  "proof_2": {
+    "status": "PROVEN",
+    "meta_pr_wins": "6/6",
+    "etg_beats_single_f1": true
+  },
+  "proof_3": {
+    "status": "PROVEN",
+    "n_paradigms_beaten": 3
+  },
+  "independence": {
+    "agreement_matrix": {
+      "NLI": {
+        "NLI": 1.0,
+        "LLM-Judge": 0.8635,
+        "QA": 0.5401
+      },
+      "LLM-Judge": {
+        "NLI": 0.8635,
+        "LLM-Judge": 1.0,
+        "QA": 0.5389
+      },
+      "QA": {
+        "NLI": 0.5401,
+        "LLM-Judge": 0.5389,
+        "QA": 1.0
+      }
+    },
+    "avg_pairwise_agreement": 0.6475,
+    "expected_independent": 0.4949,
+    "excess_correlation": 0.1526
+  },
+  "proof_4_e2e": {
+    "generator": "Qwen/Qwen2.5-1.5B-Instruct",
+    "generator_params": "1.5B",
+    "n_questions": 50,
+    "n_sentences": 58,
+    "unfiltered_factscore": 0.0862,
+    "etg_meta_accepted": 18,
+    "etg_meta_factscore": 0.2222,
+    "etg_meta_rejected_factscore": 0.025,
+    "nli_only_accepted": 18,
+    "nli_only_factscore": 0.2778,
+    "improvement_meta": 0.136,
+    "proven": true,
+    "generation_time_seconds": 126.4
+  }
+}
